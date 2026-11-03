@@ -7,6 +7,9 @@ Usage:
     python3 scripts/kulku.py --past        # past only
     python3 scripts/kulku.py --codes       # show access codes (default: hidden)
     python3 scripts/kulku.py --json        # machine-readable dump
+    python3 scripts/kulku.py --spaces      # list spaces you can book
+    python3 scripts/kulku.py --available SPACE [--date DATE]
+    python3 scripts/kulku.py --book SPACE --date DATE --time HH:MM [-y]
     python3 scripts/kulku.py --cancel ID   # cancel a reservation (prefix ok)
     python3 scripts/kulku.py --change ID   # cancel + print the rebooking URL
     python3 scripts/kulku.py --login       # force a fresh login
@@ -16,8 +19,11 @@ The script logs in directly against https://portal.kulku.io/api/v2/.
 Only the session token is stored, in .auth.json (mode 600). Your password
 is read with getpass and never written anywhere.
 
+Free reservations can be created from the CLI. Spaces that require payment
+must be booked in the normal Kulku UI because the payment flow needs a browser.
+
 Kulku has no "edit reservation" API: changing a time means cancelling the old
-reservation and booking a new one. This script can do the cancel half.
+reservation and booking a new one. This script can do both halves.
 
 This is an unofficial client. Use it on your own account only.
 """
@@ -110,7 +116,11 @@ def request(path: str, *, auth: dict | None = None, body=None, method: str | Non
     try:
         with urllib.request.urlopen(req, context=ssl.create_default_context(), timeout=60) as res:
             raw = res.read().decode() or "null"
-            return res.status, json.loads(raw)
+            try:
+                return res.status, json.loads(raw)
+            except ValueError:
+                # Some endpoints (notably booking creation) return a bare id.
+                return res.status, raw
     except urllib.error.HTTPError as e:
         raw = e.read().decode(errors="replace")
         try:
@@ -415,6 +425,313 @@ def series_occurrence_booking(series: dict, now: datetime) -> dict | None:
 
 
 # ---------------------------------------------------------------------------
+# availability / booking
+# ---------------------------------------------------------------------------
+
+
+def parse_date_arg(value: str) -> date:
+    text = value.strip().lower()
+    today = datetime.now(TZ).date()
+    if text in ("today", "t"):
+        return today
+    if text in ("tomorrow", "tom", "tmr"):
+        return today + timedelta(days=1)
+    if re.fullmatch(r"\+\d+", text):
+        return today + timedelta(days=int(text[1:]))
+    return date.fromisoformat(value.strip())
+
+
+def parse_time_arg(value: str) -> time:
+    text = value.strip()
+    for fmt in ("%H:%M", "%H.%M"):
+        try:
+            return datetime.strptime(text, fmt).time()
+        except ValueError:
+            pass
+    raise ValueError("use HH:MM")
+
+
+def parse_clock(value) -> time | None:
+    if not value:
+        return None
+    try:
+        hours, minutes = str(value).split(":")[:2]
+        return time(int(hours), int(minutes))
+    except (TypeError, ValueError):
+        return None
+
+
+def find_space(data: dict, needle: str) -> dict | None:
+    needle = needle.strip().lower()
+    spaces = list(data["spaces"].values())
+    exact = [
+        space
+        for space in spaces
+        if str(space.get("_id") or "").lower() == needle
+        or space_name(space).lower() == needle
+    ]
+    if len(exact) == 1:
+        return exact[0]
+    matches = []
+    for space in spaces:
+        space_id = str(space.get("_id") or "").lower()
+        name = space_name(space).lower()
+        if space_id.startswith(needle) or needle in name:
+            matches.append(space)
+    if not matches:
+        print(f"No space found matching {needle!r}. Try --spaces.", file=sys.stderr)
+        return None
+    if len(matches) > 1:
+        print("That matches several spaces; use more characters or the id:", file=sys.stderr)
+        for space in matches:
+            print(f"  {space_name(space):<24} {space.get('_id')}", file=sys.stderr)
+        return None
+    return matches[0]
+
+
+def day_schedule(space: dict, day: date) -> dict | None:
+    settings = space.get("reservationSettings") or {}
+    key = WEEKDAYS[day.weekday()]
+    weekly = (settings.get("weekly") or {}).get(key)
+    iso = day.isoformat()
+    for override in settings.get("overrides") or []:
+        if not isinstance(override, dict):
+            continue
+        start = override.get("startDate")
+        end = override.get("endDate")
+        if start and end and start <= iso <= end:
+            if override.get("closed"):
+                return None
+            weekly = (override.get("weekly") or {}).get(key) or weekly
+            break
+    if not isinstance(weekly, dict) or weekly.get("closed"):
+        return None
+    start_clock = parse_clock(weekly.get("startTime"))
+    end_clock = parse_clock(weekly.get("endTime"))
+    if not start_clock or not end_clock or start_clock == end_clock:
+        return None
+    return weekly
+
+
+def booking_window_error(space: dict, day: date, now: datetime) -> str | None:
+    if day < now.date():
+        return "that date is in the past"
+    try:
+        allowed = int((space.get("reservationSettings") or {}).get("allowedDaysForward"))
+    except (TypeError, ValueError):
+        return None
+    if day > now.date() + timedelta(days=allowed):
+        return f"this space can only be booked {allowed} days ahead"
+    return None
+
+
+def overlaps(a_start: datetime, a_end: datetime, b_start, b_end) -> bool:
+    if not b_start or not b_end:
+        return False
+    return a_start < b_end and b_start < a_end
+
+
+def recurring_title(series: dict) -> str:
+    title = series.get("title")
+    if isinstance(title, str):
+        return title
+    if isinstance(title, dict):
+        for lang in ("fi", "en", "sv"):
+            value = title.get(lang)
+            if value:
+                return str(value)
+    return ""
+
+
+def recurring_for_slot(series_list: list, day: date, start: datetime, end: datetime) -> dict | None:
+    key = WEEKDAYS[day.weekday()]
+    for series in series_list:
+        if series.get("day") != key:
+            continue
+        validity_start = parse_dt(series.get("start") or series.get("validityStart"))
+        validity_end = parse_dt(series.get("end") or series.get("validityEnd"))
+        if validity_start and day < validity_start.date():
+            continue
+        if validity_end and day > validity_end.date():
+            continue
+        try:
+            series_start = datetime.combine(
+                day,
+                time(int(series.get("startAtHours") or 0), int(series.get("startAtMins") or 0)),
+                tzinfo=TZ,
+            )
+            series_end = datetime.combine(
+                day,
+                time(int(series.get("endAtHours") or 0), int(series.get("endAtMins") or 0)),
+                tzinfo=TZ,
+            )
+        except (TypeError, ValueError):
+            continue
+        if series_end <= series_start:
+            series_end += timedelta(days=1)
+        if overlaps(start, end, series_start, series_end):
+            return series
+    return None
+
+
+def event_for_slot(events: list, start: datetime, end: datetime) -> dict | None:
+    for event in events:
+        event_start = parse_dt(event.get("startTime") or event.get("eventStart"))
+        event_end = parse_dt(event.get("endTime") or event.get("eventEnd"))
+        if overlaps(start, end, event_start, event_end):
+            return event
+    return None
+
+
+def own_booking_ids(data: dict) -> set[str]:
+    return {booking["id"] for booking in data["bookings"] if not booking["cancelled"]}
+
+
+def build_slots(space: dict, payload: dict, day: date, now: datetime, own_ids: set[str]) -> list[dict]:
+    weekly = day_schedule(space, day)
+    if not weekly:
+        return []
+    slot_length = int(weekly.get("slotLength") or 60)
+    start_clock = parse_clock(weekly.get("startTime"))
+    end_clock = parse_clock(weekly.get("endTime"))
+    if not start_clock or not end_clock or slot_length <= 0:
+        return []
+
+    range_start = datetime.combine(day, start_clock, tzinfo=TZ)
+    range_end = datetime.combine(day, end_clock, tzinfo=TZ)
+    if range_end <= range_start:
+        return []
+
+    capacity = max(1, int(space.get("bookingCapacity") or 1))
+    bookings = [
+        booking
+        for booking in payload.get("bookings") or []
+        if isinstance(booking, dict) and not booking.get("cancelled")
+    ]
+    events = [
+        event
+        for event in list(payload.get("events") or []) + list(space.get("events") or [])
+        if isinstance(event, dict)
+    ]
+    recurring_list = [
+        series
+        for series in (
+            payload.get("recurringReservations")
+            or (payload.get("space") or {}).get("recurringReservations")
+            or []
+        )
+        if isinstance(series, dict)
+    ]
+    settings = space.get("reservationSettings") or {}
+    try:
+        lead_hours = float(settings.get("allowedHoursToBookBefore") or 0)
+    except (TypeError, ValueError):
+        lead_hours = 0.0
+    cutoff = parse_clock(weekly.get("bookingCutoffTime"))
+
+    slots = []
+    cursor = range_start
+    while cursor < range_end:
+        slot_end = min(cursor + timedelta(minutes=slot_length), range_end)
+        overlapping = [
+            booking
+            for booking in bookings
+            if overlaps(
+                cursor,
+                slot_end,
+                parse_dt(booking.get("bookingStart")),
+                parse_dt(booking.get("bookingEnd")),
+            )
+        ]
+        mine = any(str(booking.get("_id") or "") in own_ids for booking in overlapping)
+        event = event_for_slot(events, cursor, slot_end)
+        recurring = recurring_for_slot(recurring_list, day, cursor, slot_end)
+        past = slot_end <= now
+        too_soon = lead_hours > 0 and cursor < now + timedelta(hours=lead_hours)
+        cutoff_passed = bool(cutoff and day == now.date() and now.time() >= cutoff)
+
+        detail = ""
+        if mine:
+            state = "mine"
+        elif past:
+            state = "past"
+        elif event:
+            state = "event"
+            detail = str(event.get("eventName") or event.get("name") or "")
+        elif recurring:
+            state = "recurring"
+            detail = recurring_title(recurring)
+        elif too_soon or cutoff_passed:
+            state = "closed"
+        elif len(overlapping) >= capacity:
+            state = "taken"
+        else:
+            state = "free"
+
+        slots.append(
+            {
+                "start": cursor,
+                "end": slot_end,
+                "label": f"{cursor:%H:%M}–{slot_end:%H:%M}",
+                "state": state,
+                "detail": detail,
+                "free": max(0, capacity - len(overlapping)),
+            }
+        )
+        cursor = slot_end
+    return slots
+
+
+def fetch_space_day(auth: dict, space_id: str, day: date) -> dict:
+    status, payload = request(f"space/{space_id}?date={day.isoformat()}", auth=auth)
+    if status != 200:
+        raise ApiError(status, payload)
+    if not isinstance(payload, dict):
+        raise ApiError(status, {"message": "Unexpected response from the space endpoint"})
+    return payload
+
+
+def select_slots(
+    slots: list[dict],
+    start: datetime,
+    end: datetime,
+    slot_length: int,
+    weekly: dict,
+) -> list[dict]:
+    if end <= start:
+        raise ValueError("the end time must be after the start time")
+    minutes = int((end - start).total_seconds() // 60)
+    if minutes % slot_length:
+        raise ValueError(f"the duration must be a multiple of {slot_length} minutes")
+
+    by_start = {slot["start"]: slot for slot in slots}
+    if start not in by_start:
+        free = ", ".join(slot["label"] for slot in slots if slot["state"] == "free")
+        hint = f" Free slots: {free}" if free else ""
+        raise ValueError(f"{start:%H:%M} is not a slot start.{hint}")
+
+    selected = []
+    cursor = start
+    while cursor < end:
+        slot = by_start.get(cursor)
+        if not slot:
+            raise ValueError("the requested time is outside the space's opening hours")
+        if slot["state"] != "free":
+            raise ValueError(f"{slot['label']} is not free ({slot_state_text(slot)})")
+        selected.append(slot)
+        cursor = slot["end"]
+        if cursor > end:
+            raise ValueError("the end time does not align with a slot boundary")
+    if cursor != end:
+        raise ValueError("the end time does not align with a slot boundary")
+
+    max_slots = int(weekly.get("maxSlots") or 0)
+    if max_slots > 0 and len(selected) > max_slots:
+        raise ValueError(f"this space allows at most {max_slots} consecutive slots")
+    return selected
+
+
+# ---------------------------------------------------------------------------
 # formatting
 # ---------------------------------------------------------------------------
 
@@ -548,6 +865,61 @@ def print_series(series_list: list, now: datetime, show_code: bool) -> None:
             next_text = f"  {dim('next ' + label)}"
         print(f"  {C.MAGENTA}↻{C.RESET} {schedule}  {C.BOLD}{series['name']}{C.RESET}")
         print(f"     {dim(series['address'])}{validity}{next_text}{code}")
+
+
+def slot_state_text(slot: dict) -> str:
+    colors = {
+        "free": C.GREEN,
+        "mine": C.CYAN,
+        "taken": C.RED,
+        "event": C.YELLOW,
+        "recurring": C.MAGENTA,
+        "closed": C.GREY,
+        "past": C.GREY,
+    }
+    labels = {
+        "free": "free",
+        "mine": "yours",
+        "taken": "booked",
+        "event": "event",
+        "recurring": "reserved",
+        "closed": "closed",
+        "past": "past",
+    }
+    color = colors.get(slot["state"], "")
+    label = labels.get(slot["state"], slot["state"])
+    detail = f" · {slot['detail']}" if slot.get("detail") else ""
+    return f"{color}{label}{C.RESET}{detail}"
+
+
+def print_spaces(data: dict) -> None:
+    heading("SPACES")
+    if not data["spaces"]:
+        print(f"  {dim('No spaces returned by the API.')}")
+        return
+    for space in data["spaces"].values():
+        print(
+            f"  {C.BOLD}{space_name(space):<24}{C.RESET} "
+            f"{dim(str(space.get('_id') or ''))}  {space_address(space)}"
+        )
+
+
+def print_slots(space: dict, day: date, slots: list[dict]) -> None:
+    heading(f"{space_name(space)} · {day:%a %d.%m.%Y}")
+    if space_address(space):
+        print(f"  {dim(space_address(space))}")
+    if not slots:
+        print(f"  {dim('No bookable hours on this day.')}")
+        return
+    print()
+    for slot in slots:
+        print(f"  {C.BOLD}{slot['label']}{C.RESET}  {slot_state_text(slot)}")
+    free = [slot["label"] for slot in slots if slot["state"] == "free"]
+    print()
+    if free:
+        print(f"  {dim('Book with --book SPACE --date DATE --time HH:MM')}")
+    else:
+        print(f"  {dim('No free slots on this day.')}")
 
 
 def print_header(count_upcoming: int, count_series: int, now: datetime) -> None:
@@ -755,6 +1127,240 @@ def cmd_change(data: dict, args, auth: dict) -> int:
     return 0
 
 
+def cmd_spaces(data: dict, args) -> int:
+    if args.json:
+        json.dump(
+            [
+                {
+                    "id": space.get("_id"),
+                    "name": space_name(space),
+                    "address": space_address(space),
+                }
+                for space in data["spaces"].values()
+            ],
+            sys.stdout,
+            indent=2,
+            ensure_ascii=False,
+        )
+        print()
+        return 0
+    print_spaces(data)
+    return 0
+
+
+def cmd_available(data: dict, args, auth: dict) -> int:
+    space = find_space(data, args.available)
+    if not space:
+        return 1
+    try:
+        day = parse_date_arg(args.date) if args.date else data["now"].date()
+    except ValueError:
+        print(f"Invalid date {args.date!r}; use YYYY-MM-DD, today or tomorrow.", file=sys.stderr)
+        return 2
+    window_error = booking_window_error(space, day, data["now"])
+    if window_error:
+        print(f"{C.RED}Cannot show availability:{C.RESET} {window_error}.", file=sys.stderr)
+        return 1
+    try:
+        payload = fetch_space_day(auth, space["_id"], day)
+    except ApiError as e:
+        print(f"Kulku API error: {e}", file=sys.stderr)
+        return 1
+    except urllib.error.URLError as e:
+        print(f"Network error: {e.reason}", file=sys.stderr)
+        return 1
+
+    slots = build_slots(space, payload, day, data["now"], own_booking_ids(data))
+    if args.json:
+        json.dump(
+            {
+                "space": {
+                    "id": space.get("_id"),
+                    "name": space_name(space),
+                    "address": space_address(space),
+                },
+                "date": day.isoformat(),
+                "allowReservation": payload.get("allowReservation"),
+                "paymentRequired": payload.get("paymentRequired"),
+                "monthUsage": payload.get("monthUsage"),
+                "slots": [
+                    {
+                        "start": slot["start"].isoformat(),
+                        "end": slot["end"].isoformat(),
+                        "label": slot["label"],
+                        "state": slot["state"],
+                        "detail": slot["detail"],
+                        "free": slot["free"],
+                    }
+                    for slot in slots
+                ],
+            },
+            sys.stdout,
+            indent=2,
+            ensure_ascii=False,
+        )
+        print()
+        return 0
+
+    if payload.get("allowReservation") is False:
+        print(f"{C.RED}This space is not bookable right now.{C.RESET}", file=sys.stderr)
+        return 1
+    print_slots(space, day, slots)
+    usage = payload.get("monthUsage")
+    if isinstance(usage, dict) and usage.get("limit") is not None:
+        unit = usage.get("unit") or "bookings"
+        used = usage.get("used", 0)
+        limit = usage["limit"]
+        print(f"  {dim(f'Usage: {used}/{limit} {unit} this month')}")
+    if payload.get("paymentRequired"):
+        print(f"  {C.YELLOW}This space requires payment; finish the booking in the UI.{C.RESET}")
+    return 0
+
+
+def cmd_book(data: dict, args, auth: dict) -> int:
+    space = find_space(data, args.book)
+    if not space:
+        return 1
+    if not args.time:
+        print("--book needs --time HH:MM (or HH:MM-HH:MM).", file=sys.stderr)
+        return 2
+    try:
+        day = parse_date_arg(args.date) if args.date else data["now"].date()
+    except ValueError:
+        print(f"Invalid date {args.date!r}; use YYYY-MM-DD, today or tomorrow.", file=sys.stderr)
+        return 2
+    try:
+        time_text = args.time.replace("–", "-")
+        if "-" in time_text:
+            start_text, end_text = time_text.split("-", 1)
+            start_clock = parse_time_arg(start_text)
+            end_clock = parse_time_arg(end_text)
+        else:
+            start_clock = parse_time_arg(args.time)
+            end_clock = None
+    except ValueError:
+        print(f"Invalid time {args.time!r}; use HH:MM or HH:MM-HH:MM.", file=sys.stderr)
+        return 2
+
+    window_error = booking_window_error(space, day, data["now"])
+    if window_error:
+        print(f"{C.RED}Cannot book:{C.RESET} {window_error}.", file=sys.stderr)
+        return 1
+
+    start = datetime.combine(day, start_clock, tzinfo=TZ)
+    try:
+        payload = fetch_space_day(auth, space["_id"], day)
+    except ApiError as e:
+        print(f"Kulku API error: {e}", file=sys.stderr)
+        return 1
+    except urllib.error.URLError as e:
+        print(f"Network error: {e.reason}", file=sys.stderr)
+        return 1
+
+    if payload.get("allowReservation") is False:
+        print(f"{C.RED}This space is not bookable right now.{C.RESET}", file=sys.stderr)
+        return 1
+
+    weekly = day_schedule(space, day)
+    if not weekly:
+        print(f"{C.RED}This space is closed on {day:%a %d.%m.%Y}.{C.RESET}", file=sys.stderr)
+        return 1
+    slot_length = int(weekly.get("slotLength") or 60)
+
+    if end_clock:
+        end = datetime.combine(day, end_clock, tzinfo=TZ)
+        if end <= start:
+            print("The end time must be after the start time.", file=sys.stderr)
+            return 2
+    else:
+        duration = args.duration if args.duration is not None else slot_length
+        if duration <= 0:
+            print("--duration must be a positive number of minutes.", file=sys.stderr)
+            return 2
+        end = start + timedelta(minutes=duration)
+
+    slots = build_slots(space, payload, day, data["now"], own_booking_ids(data))
+    try:
+        selected = select_slots(slots, start, end, slot_length, weekly)
+    except ValueError as e:
+        print(f"{C.RED}Cannot book:{C.RESET} {e}.", file=sys.stderr)
+        return 1
+
+    if not args.json:
+        print(f"{C.BOLD}{space_name(space)}{C.RESET}")
+        print(f"  {start:%a %d.%m.%Y %H:%M}–{end:%H:%M}  {dim(space_address(space))}")
+        print(f"  {dim(fmt_duration(start, end))} · {len(selected)} slot(s)")
+        usage = payload.get("monthUsage")
+        if isinstance(usage, dict) and usage.get("limit") is not None:
+            unit = usage.get("unit") or "bookings"
+            used = usage.get("used", 0)
+            limit = usage["limit"]
+            print(f"  {dim(f'Usage: {used}/{limit} {unit} this month')}")
+        if payload.get("paymentRequired"):
+            print(f"  {C.YELLOW}This space may require payment; the API will tell us.{C.RESET}")
+
+    if not args.yes:
+        if not sys.stdin.isatty():
+            print("Refusing to book without --yes in a non-interactive shell.", file=sys.stderr)
+            return 1
+        answer = input("\nBook this reservation? [y/N] ").strip().lower()
+        if answer not in ("y", "yes"):
+            print("Not booked.")
+            return 0
+
+    booking_id = do_book(space, start, end, auth)
+    if not booking_id:
+        return 1
+    if args.json:
+        json.dump(
+            {
+                "id": booking_id,
+                "space": space_name(space),
+                "spaceId": space.get("_id"),
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+            },
+            sys.stdout,
+            indent=2,
+            ensure_ascii=False,
+        )
+        print()
+    else:
+        print(
+            f"{C.GREEN}Booked.{C.RESET} {space_name(space)}, "
+            f"{start:%a %d.%m. %H:%M}–{end:%H:%M}  {dim(booking_id)}"
+        )
+    return 0
+
+
+def do_book(space: dict, start: datetime, end: datetime, auth: dict) -> str | None:
+    body = {
+        "spaceId": space.get("_id"),
+        "bookingStart": start.strftime("%Y-%m-%dT%H:%M:00"),
+        "bookingEnd": end.strftime("%Y-%m-%dT%H:%M:00"),
+        "checkoutData": "",
+    }
+    status, payload = request("new/space/book", auth=auth, body=body)
+    if not 200 <= status < 300:
+        message = payload.get("message") if isinstance(payload, dict) else payload
+        code = payload.get("code") if isinstance(payload, dict) else None
+        print(f"{C.RED}Booking failed ({status}):{C.RESET} {message}", file=sys.stderr)
+        if code == "payment_required":
+            url = f"https://time.kulku.io/book-space/{space.get('_id')}"
+            print(f"Finish the paid booking here: {C.CYAN}{url}{C.RESET}", file=sys.stderr)
+        elif code == "free_hours_changed":
+            print("Your free quota changed; run --available again.", file=sys.stderr)
+        return None
+
+    booking_id = payload
+    if isinstance(payload, dict):
+        booking_id = payload.get("_id") or payload.get("id")
+    if not booking_id:
+        print(f"Booking may have failed: unexpected response {payload!r}", file=sys.stderr)
+        return None
+    return str(booking_id).strip()
+
+
 # ---------------------------------------------------------------------------
 # main
 # ---------------------------------------------------------------------------
@@ -762,7 +1368,7 @@ def cmd_change(data: dict, args, auth: dict) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Show and cancel your KulkuTIME reservations.",
+        description="Show, create and cancel your KulkuTIME reservations.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -772,9 +1378,15 @@ def main() -> int:
     parser.add_argument("--codes", action="store_true", help="show access codes")
     parser.add_argument("--limit", type=int, default=20, help="past entries to show (0 = all)")
     parser.add_argument("--json", action="store_true", help="JSON output")
+    parser.add_argument("--spaces", "--list-spaces", action="store_true", help="list spaces you can book")
+    parser.add_argument("--available", "--slots", metavar="SPACE", help="show slots for a space")
+    parser.add_argument("--book", "--reserve", metavar="SPACE", help="book a slot in a space")
+    parser.add_argument("--date", metavar="DATE", help="date for --available/--book (YYYY-MM-DD, today, tomorrow)")
+    parser.add_argument("--time", metavar="HH:MM", help="start time for --book (or HH:MM-HH:MM)")
+    parser.add_argument("--duration", type=int, metavar="MINUTES", help="length for --book (default: one slot)")
     parser.add_argument("--cancel", metavar="ID", help="cancel a reservation by id or prefix")
     parser.add_argument("--change", metavar="ID", help="cancel a reservation and print the rebooking URL")
-    parser.add_argument("-y", "--yes", action="store_true", help="do not ask before cancelling")
+    parser.add_argument("-y", "--yes", action="store_true", help="do not ask before booking or cancelling")
     parser.add_argument("--login", action="store_true", help="force a new login")
     parser.add_argument("--logout", action="store_true", help="remove the saved session")
     parser.add_argument("--no-color", action="store_true", help="disable ANSI colours")
@@ -809,6 +1421,12 @@ def main() -> int:
         print(f"Network error: {e.reason}", file=sys.stderr)
         return 1
 
+    if args.spaces:
+        return cmd_spaces(data, args)
+    if args.available:
+        return cmd_available(data, args, auth)
+    if args.book:
+        return cmd_book(data, args, auth)
     if args.cancel:
         return cmd_cancel(data, args, auth)
     if args.change:
