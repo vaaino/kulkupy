@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -396,23 +396,23 @@
   <div class="container nav-inner">
     <a class="nav-logo" href="#" aria-label="Fomo"><span class="nav-wordmark">fomo</span></a>
     <div class="nav-links">
-      <a href="#" id="nav-home" class="active">Etusivu</a>
-      <a href="#booking-box" id="nav-bookings">Varaukset</a>
+      <a href="#" id="nav-home" class="active">Home</a>
+      <a href="#booking-box" id="nav-bookings">Bookings</a>
     </div>
     <div class="nav-user" id="nav-login" hidden>
-      <a class="invert-ghost-button" href="#login-box">Kirjaudu sisään</a>
+      <a class="invert-ghost-button" href="#login-box">Log in</a>
     </div>
     <div class="nav-user" id="nav-user" hidden>
       <span class="nav-who" id="who"></span>
-      <button id="logout" class="invert-ghost-button" type="button">Kirjaudu ulos</button>
+      <button id="logout" class="invert-ghost-button" type="button">Log out</button>
     </div>
   </div>
 </nav>
 
 <div id="boot" class="boot">
   <div class="container">
-    <p>Ladataan Fomoa…</p>
-    <p class="muted small">Ensimmäinen lataus hakee Pyodiden (~10 MB).</p>
+    <p>Loading Fomo…</p>
+    <p class="muted small">The first load downloads Pyodide (~10 MB).</p>
   </div>
 </div>
 
@@ -420,48 +420,48 @@
   <header class="landing-header">
     <div class="landing-header-content">
       <div class="hero-logo"><span class="hero-wordmark">fomo</span></div>
-      <h1>Varaukset</h1>
+      <h1>Bookings</h1>
       <div class="hero-actions">
-        <a class="large-tertiary-button" href="#login-box">Kirjaudu sisään</a>
+        <a class="large-tertiary-button" href="#login-box">Log in</a>
       </div>
     </div>
   </header>
   <div class="container page-content">
-    <div class="flash-message">Fomo on epävirallinen varausnäkymä. Käytä omalla vastuulla.</div>
+    <div class="flash-message">Fomo is an unofficial booking view. Use at your own risk.</div>
     <div class="grid-2">
       <div class="box" id="login-box">
         <div class="box-content">
-          <h2>Kirjaudu sisään</h2>
-          <p class="muted">Käytä Kulku-tilisi puhelinnumeroa ja salasanaa.</p>
+          <h2>Log in</h2>
+          <p class="muted">Use your Kulku phone number and password.</p>
           <form id="login-form">
-            <label for="phone">Puhelinnumero</label>
+            <label for="phone">Phone number</label>
             <input id="phone" type="tel" autocomplete="tel" placeholder="040 123 4567" required>
-            <label for="password">Salasana</label>
+            <label for="password">Password</label>
             <input id="password" type="password" autocomplete="current-password" required>
             <div class="form-actions">
-              <button class="primary-button" type="submit">Kirjaudu sisään</button>
+              <button class="primary-button" type="submit">Log in</button>
               <span id="login-error" class="status error"></span>
             </div>
           </form>
           <hr class="rule">
           <details class="auth-import">
-            <summary>Tai tuo .auth.json-tiedosto</summary>
-            <label for="auth-file">Valitse tiedosto</label>
+            <summary>Or import .auth.json</summary>
+            <label for="auth-file">Choose file</label>
             <input id="auth-file" type="file" accept="application/json,.json">
-            <p class="muted small">Tiedosto pysyy selaimessasi. Sitä ei lähetetä minnekään muualle kuin Kulkuun.</p>
+            <p class="muted small">The file stays in your browser. It is only sent to Kulku.</p>
           </details>
         </div>
       </div>
       <div class="box">
         <div class="box-content">
-          <h2>Näin teet varauksen</h2>
+          <h2>How to book</h2>
           <ol class="steps">
-            <li>Kirjaudu sisään Kulku-tunnuksillasi.</li>
-            <li>Valitse pyykkitupa, sauna tai kerhohuone.</li>
-            <li>Valitse päivä ja klikkaa vapaata vuoroa.</li>
-            <li>Voit peruuttaa oman varauksesi klikkaamalla sitä.</li>
+            <li>Log in with your Kulku credentials.</li>
+            <li>Choose a laundry room, sauna or club room.</li>
+            <li>Choose a day and click a free slot.</li>
+            <li>You can cancel your own booking by clicking it.</li>
           </ol>
-          <p class="muted small">Fomo käyttää samaa Kulku-varausjärjestelmää kuin virallinen palvelu. Varaukset näkyvät myös siellä.</p>
+          <p class="muted small">Fomo uses the same Kulku booking system as the official service. Bookings also appear there.</p>
         </div>
       </div>
     </div>
@@ -472,29 +472,29 @@
   <header class="landing-header compact">
     <div class="landing-header-content">
       <div class="hero-logo"><span class="hero-wordmark">fomo</span></div>
-      <h1>Varaukset</h1>
+      <h1>Bookings</h1>
     </div>
   </header>
   <div class="container page-content">
     <div class="box" id="booking-box">
       <div class="box-content">
         <div class="toolbar">
-          <select id="group" aria-label="Varausryhmä">
-            <option value="laundry" selected>Pyykkituvat</option>
-            <option value="sauna">Saunat</option>
-            <option value="clubroom">Kerhohuone</option>
-            <option value="all">Kaikki</option>
+          <select id="group" aria-label="Booking group">
+            <option value="laundry" selected>Laundry</option>
+            <option value="sauna">Saunas</option>
+            <option value="clubroom">Club room</option>
+            <option value="all">All</option>
           </select>
-          <button id="refresh" class="tool-button" type="button">Päivitä</button>
+          <button id="refresh" class="tool-button" type="button">Refresh</button>
         </div>
         <div id="status" class="status"></div>
         <ul class="tabs booking-tabs" id="day-tabs"></ul>
         <div id="grid" class="grid"></div>
         <div class="legend">
-          <span class="l-free">vapaa / varaa</span>
-          <span class="l-mine">oma / peruuta</span>
-          <span class="l-taken">varattu</span>
-          <span class="l-shift">yleinen vuoro</span>
+          <span class="l-free">free / book</span>
+          <span class="l-mine">yours / cancel</span>
+          <span class="l-taken">booked</span>
+          <span class="l-shift">public shift</span>
         </div>
       </div>
     </div>
@@ -504,12 +504,12 @@
 <footer class="site-footer">
   <div class="container">
     <div class="footer-logo"><span class="footer-wordmark">fomo</span></div>
-    <p>Fomo · epävirallinen varausnäkymä</p>
+    <p>Fomo · unofficial booking view</p>
   </div>
 </footer>
 
 <div id="toast" hidden></div>
-<noscript>Tämä sivu tarvitsee JavaScriptin ja WebAssemblyn.</noscript>
+<noscript>This page needs JavaScript and WebAssembly.</noscript>
 
 <script type="text/plain" id="kulku-source">__KULKU_B64__</script>
 <script type="text/plain" id="app-source">__APP_B64__</script>
@@ -668,7 +668,7 @@ function showToast(text, undoId) {
   if (undoId) {
     const undo = document.createElement("button");
     undo.type = "button";
-    undo.textContent = "Kumoa";
+    undo.textContent = "Undo";
     undo.onclick = () => {
       hideToast();
       doCancel(undoId);
@@ -690,7 +690,7 @@ function handleAuthExpired() {
   storageRemove(AUTH_KEY);
   try { state.app.set_auth(""); } catch (err) { /* ignore */ }
   showView("login");
-  setLoginError("Istunto vanhentui. Kirjaudu uudelleen.");
+  setLoginError("Session expired. Log in again.");
 }
 
 function handleError(res) {
@@ -698,29 +698,29 @@ function handleError(res) {
     handleAuthExpired();
     return;
   }
-  setStatus((res && res.error) || "Tuntematon virhe", true);
+  setStatus((res && res.error) || "Unknown error", true);
 }
 
 async function boot() {
   showView("boot");
   try {
     if (typeof loadPyodide !== "function") throw new Error("Pyodide failed to load from the CDN");
-    setBoot("Ladataan Pyodidea…");
+    setBoot("Loading Pyodide…");
     const pyodide = await loadPyodide({ indexURL: CDN });
-    setBoot("Ladataan aikavyöhykettä…");
+    setBoot("Loading timezone data…");
     try {
       await pyodide.loadPackage("tzdata");
     } catch (err) {
-      setBoot("Asennetaan aikavyöhykettä…");
+      setBoot("Installing timezone data…");
       await pyodide.runPythonAsync("import micropip\nawait micropip.install('tzdata')");
     }
 
-    setBoot("Ladataan Kulku-koodia…");
+    setBoot("Loading Kulku code…");
     const kulkuSource = inlineSource("kulku-source");
     const appSource = inlineSource("app-source");
     pyodide.FS.writeFile("/home/pyodide/kulku.py", new TextEncoder().encode(kulkuSource));
     pyodide.FS.writeFile("/home/pyodide/app.py", new TextEncoder().encode(appSource));
-    setBoot("Käynnistetään Pythonia…");
+    setBoot("Starting Python…");
     await pyodide.runPythonAsync(
       'import sys\nsys.path.insert(0, "/home/pyodide")\nimport kulku\nimport app\n'
     );
@@ -751,19 +751,20 @@ async function boot() {
 function renderDayTabs() {
   const el = $("day-tabs");
   if (!el) return;
-  const weekdays = ["su", "ma", "ti", "ke", "to", "pe", "la"];
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const days = [];
   const today = helsinkiToday();
   for (let i = 0; i < 7; i++) {
     const iso = addDays(today, i);
     const d = new Date(iso + "T12:00:00Z");
-    days.push({ iso, label: `${weekdays[d.getUTCDay()]} ${d.getUTCDate()}.${d.getUTCMonth() + 1}.` });
+    days.push({ iso, label: `${weekdays[d.getUTCDay()]} ${d.getUTCDate()} ${months[d.getUTCMonth()]}` });
   }
   if (!days.some((day) => day.iso === state.date)) {
     const d = new Date(state.date + "T12:00:00Z");
     days.push({
       iso: state.date,
-      label: `${weekdays[d.getUTCDay()]} ${d.getUTCDate()}.${d.getUTCMonth() + 1}.`,
+      label: `${weekdays[d.getUTCDay()]} ${d.getUTCDate()} ${months[d.getUTCMonth()]}`,
     });
   }
   el.innerHTML = days
@@ -798,14 +799,14 @@ async function loadGrid(silent = false) {
   if (!state.app || state.busy || !state.auth) return;
   state.busy = true;
   $("grid").classList.add("busy");
-  if (!silent) setStatus("Ladataan…");
+  if (!silent) setStatus("Loading…");
   await tick();
   try {
     const spaces = (await loadSpaces()).filter((space) => groupMatches(space, state.group));
     if (!spaces.length) {
       state.payload = { columns: [], rows: [] };
       renderGrid(state.payload);
-      setStatus("Ei tiloja tässä ryhmässä.");
+      setStatus("No spaces in this group.");
       return;
     }
     const day = state.date;
@@ -849,7 +850,7 @@ async function loadGrid(silent = false) {
     }
     state.payload = res;
     renderGrid(res);
-    setStatus("Päivitetty " + new Date().toLocaleTimeString("fi-FI", { hour: "2-digit", minute: "2-digit" }));
+    setStatus("Updated " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }));
   } catch (err) {
     if (err && err.status === 401) {
       handleAuthExpired();
@@ -866,7 +867,7 @@ function renderGrid(payload) {
   const spaces = payload.rows || [];
   const times = payload.columns || [];
   if (!times.length || !spaces.length) {
-    $("grid").innerHTML = '<p class="muted">Ei varattavia vuoroja tälle päivälle.</p>';
+    $("grid").innerHTML = '<p class="muted">No bookable slots for this day.</p>';
     return;
   }
 
@@ -877,7 +878,7 @@ function renderGrid(payload) {
     bySpace[space.id] = map;
   }
 
-  let html = '<div class="booking-table"><div class="booking-table-container-scroll"><table class="table"><thead><tr><th>Aika</th>';
+  let html = '<div class="booking-table"><div class="booking-table-container-scroll"><table class="table"><thead><tr><th>Time</th>';
   for (const space of spaces) {
     const headerTitle = space.error || space.address || "";
     html += `<th class="align-center" title="${esc(headerTitle)}"><p>${esc(space.name)}</p></th>`;
@@ -894,16 +895,16 @@ function renderGrid(payload) {
       }
       const title = `${space.name} · ${slot.label}${slot.detail ? " · " + slot.detail : ""}`;
       if (slot.state === "free") {
-        html += `<td class="align-center"><div class="inline_button_to"><button type="button" class="small-default-button slot-free" data-space="${esc(space.id)}" data-start="${esc(slot.start)}" data-end="${esc(slot.end)}" data-label="${esc(slot.label)}" title="${esc(title)}" aria-label="Varaa ${esc(title)}">Varaa</button></div></td>`;
+        html += `<td class="align-center"><div class="inline_button_to"><button type="button" class="small-default-button slot-free" data-space="${esc(space.id)}" data-start="${esc(slot.start)}" data-end="${esc(slot.end)}" data-label="${esc(slot.label)}" title="${esc(title)}" aria-label="Book ${esc(title)}">Book</button></div></td>`;
       } else if (slot.state === "mine") {
-        html += `<td class="align-center"><div class="inline_button_to"><button type="button" class="small-reject-button slot-mine" data-booking="${esc(slot.bookingId || "")}" data-label="${esc(slot.label)}" title="${esc(title)}" aria-label="Peruuta ${esc(title)}">Peru</button></div></td>`;
+        html += `<td class="align-center"><div class="inline_button_to"><button type="button" class="small-reject-button slot-mine" data-booking="${esc(slot.bookingId || "")}" data-label="${esc(slot.label)}" title="${esc(title)}" aria-label="Cancel ${esc(title)}">Cancel</button></div></td>`;
       } else {
         const text = slot.state === "recurring"
-          ? (slot.detail || "Yleinen vuoro")
+          ? (slot.detail || "Public shift")
           : slot.state === "event"
-            ? (slot.detail || "Tapahtuma")
+            ? (slot.detail || "Event")
             : slot.state === "taken"
-              ? "Varattu"
+              ? "Booked"
               : slot.state === "past" || slot.state === "closed"
                 ? "–"
                 : "";
@@ -945,13 +946,13 @@ async function onBook(event) {
     return;
   }
   await loadGrid(true);
-  showToast(`Varattu ${label}.`, result.bookingId);
+  showToast(`Booked ${label}.`, result.bookingId);
 }
 
 async function onCancelClick(event) {
   const bookingId = event.currentTarget.dataset.booking;
   if (!bookingId) return;
-  if (!confirm("Peruuta tämä varaus?")) return;
+  if (!confirm("Cancel this booking?")) return;
   await doCancel(bookingId);
 }
 
@@ -959,7 +960,7 @@ async function doCancel(bookingId) {
   if (state.busy) return;
   state.busy = true;
   $("grid").classList.add("busy");
-  setStatus("Peruutetaan…");
+  setStatus("Cancelling…");
   await tick();
   let result;
   try {
@@ -975,7 +976,7 @@ async function doCancel(bookingId) {
     return;
   }
   await loadGrid(true);
-  showToast("Peruttu.");
+  showToast("Cancelled.");
 }
 
 $("login-form").addEventListener("submit", async (event) => {
@@ -988,7 +989,7 @@ $("login-form").addEventListener("submit", async (event) => {
   try {
     const res = parseJson(state.app.login($("phone").value, $("password").value));
     if (!res.ok) {
-      setLoginError(res.error || "Kirjautuminen epäonnistui");
+      setLoginError(res.error || "Login failed");
       return;
     }
     state.auth = res.auth;
@@ -1009,7 +1010,7 @@ $("auth-file").addEventListener("change", async (event) => {
     const text = await file.text();
     const res = parseJson(state.app.set_auth(text));
     if (!res.ok) {
-      setLoginError(res.error || "Virheellinen .auth.json-tiedosto");
+      setLoginError(res.error || "Invalid .auth.json file");
       return;
     }
     const auth = JSON.parse(text);

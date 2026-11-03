@@ -11,7 +11,7 @@ Python server is needed for normal use.
 
 The reservation view follows Domo's own `booking-tabs` / `booking-table`
 structure: day tabs, machines across the top, time rows down the left, a
-sticky time column, green `Varaa` buttons and red `Peru` buttons for your own
+sticky time column, green `Book` buttons and red `Cancel` buttons for your own
 bookings.
 
 This is an unofficial personal mockup. The background pattern is used only to
