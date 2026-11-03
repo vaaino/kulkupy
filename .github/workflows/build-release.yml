@@ -1,0 +1,68 @@
+name: Build Fomo
+
+on:
+  push:
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (optional, e.g. v1.0.0)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build the self-contained page
+        run: |
+          python3 web/build.py
+          python3 -m py_compile kulku.py web/app.py
+          test -s web/index.html
+          if grep -qE '__KULKU_B64__|__APP_B64__|__HERO_BG__' web/index.html; then
+            echo "Unreplaced placeholder in web/index.html" >&2
+            exit 1
+          fi
+          git diff --exit-code -- web/index.html
+
+      - name: Stage release asset
+        run: |
+          mkdir -p dist
+          cp web/index.html dist/fomo.html
+          (cd dist && sha256sum fomo.html > fomo.html.sha256)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fomo-html
+          path: dist/
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ github.token }}
+          files: |
+            dist/fomo.html
+            dist/fomo.html.sha256
+          generate_release_notes: true
+
+      - name: Publish manual release
+        if: github.event_name == 'workflow_dispatch' && inputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ inputs.tag }}" \
+            dist/fomo.html dist/fomo.html.sha256 \
+            --generate-notes --target "$GITHUB_SHA"

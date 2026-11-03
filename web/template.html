@@ -1,0 +1,1049 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Fomo</title>
+  <style>
+    :root {
+      --purple-dark: #442665;
+      --purple: #55307f;
+      --purple-light: #6e3ea4;
+      --purple-pale: #8756bf;
+      --yellow: #fff7cc;
+      --yellow-dark: #ebe0ad;
+      --orange: #ffa600;
+      --ink: #2c383f;
+      --muted: #77838a;
+      --line: #dde1e3;
+      --red: #d2432d;
+      --green: #4db363;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      color: var(--ink);
+      font-family: "Soleil", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    a { color: var(--purple); text-decoration: none; }
+    a:hover { color: var(--purple-light); text-decoration: underline; }
+    .container { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+    .muted { color: var(--muted); }
+    .small { font-size: 13px; }
+    [hidden] { display: none !important; }
+
+    /* Domo navigation */
+    .nav-student { background: var(--purple-dark); color: #fff; }
+    .nav-inner { display: flex; align-items: center; gap: 24px; min-height: 68px; }
+    .nav-logo { display: flex; align-items: center; gap: 7px; color: #fff; text-decoration: none; }
+    .nav-logo:hover { text-decoration: none; }
+    .nav-wordmark { font-size: 32px; font-weight: 800; line-height: .9; letter-spacing: -.06em; }
+    .nav-links { display: flex; gap: 20px; align-items: stretch; }
+    .nav-links a {
+      color: #fff;
+      font-size: 17px;
+      padding: 21px 0 18px;
+      border-bottom: 3px solid transparent;
+      text-decoration: none;
+    }
+    .nav-links a:hover, .nav-links a.active { color: #fff; border-bottom-color: #fff; text-decoration: none; }
+    .nav-user { margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 13px; }
+    .nav-who { color: rgba(255,255,255,.8); }
+    .invert-ghost-button {
+      display: inline-block;
+      padding: 10px 16px;
+      font: inherit;
+      font-size: 13px;
+      line-height: 1;
+      color: #fff;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.65);
+      border-radius: 3px;
+      text-decoration: none;
+      cursor: pointer;
+      text-shadow: 1px 1px rgba(0,0,0,.3);
+      transition: background .08s, color .08s;
+    }
+    .invert-ghost-button:hover { background: rgba(255,255,255,.12); color: #fff; text-decoration: none; }
+
+    /* Domo hero */
+    .landing-header {
+      background-color: var(--purple);
+      background-image: url("__HERO_BG__");
+      background-repeat: repeat;
+      color: #fff;
+      text-align: center;
+      padding: 62px 20px 58px;
+    }
+    .landing-header.compact { padding: 26px 20px 24px; }
+    .landing-header-content { max-width: 900px; margin: 0 auto; }
+    .hero-logo { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 28px; }
+    .hero-wordmark { font-size: 64px; font-weight: 800; line-height: .9; letter-spacing: -.06em; }
+    .landing-header.compact .hero-logo { margin-bottom: 14px; }
+    .landing-header.compact .hero-wordmark { font-size: 40px; }
+    .landing-header h1 { margin: 0; font-size: 2.1rem; font-weight: 600; letter-spacing: -.01em; }
+    .landing-header h1 span { display: block; margin-top: .35em; font-size: .52em; font-weight: 300; color: #fff; }
+    .landing-header.compact h1 { font-size: 1.65rem; }
+    .hero-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 28px; }
+    .large-tertiary-button,
+    .large-invert-ghost-button {
+      display: inline-block;
+      min-width: 180px;
+      padding: 14px 28px;
+      border-radius: 3px;
+      font-size: 15px;
+      line-height: 1;
+      text-align: center;
+      text-decoration: none;
+      transition: background .08s, color .08s, border-color .08s;
+    }
+    .large-tertiary-button {
+      color: var(--purple);
+      background: var(--yellow);
+      border: 0;
+      border-bottom: 2px solid #e0d185;
+      text-shadow: 1px 1px rgba(255,255,255,.5);
+    }
+    .large-tertiary-button:hover { color: var(--purple); background: #fff; text-decoration: none; }
+    .large-invert-ghost-button {
+      color: #fff;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.7);
+      text-shadow: 1px 1px rgba(0,0,0,.3);
+    }
+    .large-invert-ghost-button:hover { color: #fff; background: rgba(255,255,255,.1); text-decoration: none; }
+
+    /* Domo content boxes */
+    main { flex: 1; }
+    .page-content { padding-bottom: 48px; }
+    .flash-message {
+      margin: 25px 0;
+      padding: 14px 18px;
+      color: #fff;
+      background: var(--orange);
+      border-radius: 3px;
+      text-align: center;
+      font-size: 15px;
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: stretch; }
+    .box { display: flex; background: var(--line); border: 2px solid var(--line); border-radius: 4px; }
+    .box-content { flex: 1; padding: 25px; background: #fff; border-radius: 3px; overflow: hidden; }
+    .box h2 { margin: 0 0 10px; font-size: 1.3rem; font-weight: 600; }
+    .box h3 { margin: 18px 0 8px; font-size: 1rem; }
+    .box p { margin: .6em 0; }
+    .box ul, .box ol { margin: .6em 0; padding-left: 1.3em; }
+    .box li { margin: .3em 0; }
+    .rule { border: 0; border-top: 1px solid var(--line); margin: 22px 0; }
+    .steps { margin: .8em 0 1.2em; padding-left: 1.3em; }
+    .steps li { margin: .45em 0; }
+
+    /* forms and controls */
+    label { display: block; margin: 14px 0 6px; color: #6b7780; font-size: 13px; }
+    input[type="tel"], input[type="password"], input[type="date"], input[type="text"], select {
+      width: 100%;
+      padding: 10px 12px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      font: inherit;
+      font-size: 15px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--purple-light); box-shadow: 0 0 0 2px rgba(110,62,164,.15); }
+    input[type="file"] { width: 100%; font-size: 13px; }
+    .form-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+    .primary-button {
+      padding: 12px 20px;
+      color: #fff;
+      background: var(--purple);
+      border: 0;
+      border-bottom: 2px solid #301b47;
+      border-radius: 3px;
+      font: inherit;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      text-shadow: 1px 1px rgba(0,0,0,.3);
+      transition: background .08s;
+    }
+    .primary-button:hover { background: var(--purple-light); }
+    .auth-import summary { color: var(--purple); cursor: pointer; font-weight: 600; }
+    .auth-import p { margin: .6em 0 0; }
+
+    /* Domo booking controls and table */
+    .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .toolbar select { width: auto; min-width: 180px; }
+    .tool-button {
+      padding: 10px 12px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      font: inherit;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .tool-button:hover { background: #f5f5f5; }
+    .status { min-height: 1.5em; margin: 6px 0 10px; color: var(--muted); font-size: 13px; }
+    .status.error { color: var(--red); }
+    .form-actions .status { min-height: 0; margin: 0; }
+
+    .tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; margin: 0; padding: 0; list-style: none; }
+    .tabs li { display: block; flex: 0 0 auto; }
+    .tabs a {
+      display: block;
+      padding: 1.0615384615em 0.82308em;
+      color: var(--ink);
+      border: 2px solid transparent;
+      border-bottom: 0;
+      font-size: 0.8125em;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .tabs a:hover { color: var(--purple); text-decoration: none; }
+    .tabs .active {
+      position: relative;
+      background: #fdfdfd;
+      border-color: var(--line);
+      border-width: 2px 2px 0;
+      border-style: solid;
+      border-top-left-radius: 5px;
+      border-top-right-radius: 5px;
+    }
+    .booking-tabs { margin: 0; }
+    @media all and (min-width: 37.5em) {
+      .booking-tabs a { padding: 1.0615384615em 2.1230769231em; }
+    }
+
+    .table { width: 100%; }
+    .table tr { font-size: 0.875em; border-bottom: 1px solid var(--line); }
+    .table tr:last-child { border-bottom: 0; }
+    .table thead tr {
+      font-size: 0.75em;
+      line-height: 3.5;
+      border-bottom: 1px solid var(--line) !important;
+      font-weight: 600;
+      color: var(--ink);
+      background: #fdfdfd;
+      text-transform: uppercase;
+    }
+    .table td { line-height: 3; }
+    .table td, .table th { text-align: left; }
+    .table td.align-center, .table th.align-center { padding: 0; text-align: center; }
+    .table td:first-child, .table th:first-child { padding-left: 1.25em; }
+    .booking-table { width: 100%; }
+    .booking-table-container-scroll {
+      width: 100%;
+      max-height: 70vh;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      background:
+        linear-gradient(to right, white 30%, transparent) left center/40px 100% no-repeat,
+        linear-gradient(to left, white 30%, transparent) right center/40px 100% no-repeat,
+        linear-gradient(to right, rgba(0,0,0,0.12), transparent) left center/14px 100% no-repeat,
+        linear-gradient(to left, rgba(0,0,0,0.12), transparent) right center/14px 100% no-repeat;
+      background-attachment: local, local, scroll, scroll;
+    }
+    .booking-table table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .booking-table thead th { position: sticky; top: 0; z-index: 2; background: #fafafa; }
+    .booking-table th:first-child { left: 0; z-index: 3; min-width: 5.5rem; }
+    .booking-table td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      min-width: 5.5rem;
+      padding: 0 0.5rem 0;
+      font-weight: bold;
+      white-space: nowrap;
+      background: #fafafa;
+      border-bottom: 1px solid var(--line);
+    }
+    .booking-table th { white-space: nowrap; }
+    .booking-table th p { padding: 0 0.25rem 0; }
+    .booking-table .inline_button_to { padding: 0 2rem; }
+    .booking-table .inline_button_to .small-default-button,
+    .booking-table .inline_button_to .small-reject-button { min-width: 80px; max-width: 90px; }
+    .booked-cell { color: #98a3aa; font-size: 0.8em; }
+    .grid.busy { opacity: 0.55; pointer-events: none; }
+
+    .small-default-button,
+    .small-reject-button {
+      display: inline-block;
+      padding: 0.503125em 0.71875em !important;
+      color: #fff !important;
+      border: 0;
+      border-bottom: 2px solid rgba(0,0,0,0.1);
+      border-radius: 3px;
+      font: inherit;
+      font-size: 11px !important;
+      line-height: 1;
+      text-align: center;
+      text-decoration: none;
+      text-shadow: 1px 1px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: background 0.08s;
+    }
+    .small-default-button { background: var(--green); }
+    .small-default-button:hover { background: #479458; }
+    .small-reject-button { background: var(--red); }
+    .small-reject-button:hover { background: #a33929; }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; color: var(--muted); font-size: 12px; }
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: .8rem;
+      height: .8rem;
+      margin-right: .35rem;
+      vertical-align: -.1rem;
+      border-radius: 2px;
+      background: currentColor;
+    }
+    .legend .l-free::before { background: var(--green); }
+    .legend .l-mine::before { background: var(--red); }
+    .legend .l-taken::before { background: var(--line); }
+    .legend .l-shift::before { background: var(--orange); }
+
+    /* footer */
+    .site-footer { margin-top: auto; padding: 28px 0; color: #fff; background: var(--purple-dark); text-align: center; font-size: 13px; }
+    .footer-logo { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 10px; }
+    .footer-wordmark { font-size: 24px; font-weight: 800; line-height: .9; letter-spacing: -.06em; }
+    .site-footer p { margin: .3em 0; }
+    .site-footer a { color: #fff; text-decoration: underline; }
+
+    .boot { flex: 1; padding: 80px 20px; text-align: center; }
+    .boot p { margin: .5em 0; }
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      max-width: calc(100vw - 2rem);
+      padding: 12px 16px;
+      color: #fff;
+      background: var(--purple-dark);
+      border-radius: 3px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+      transform: translateX(-50%);
+    }
+    #toast button {
+      padding: 7px 12px;
+      color: var(--purple);
+      background: var(--yellow);
+      border: 0;
+      border-radius: 3px;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 760px) {
+      .container { width: calc(100% - 24px); }
+      .nav-inner { flex-wrap: wrap; gap: 8px; padding: 10px 0; min-height: 0; }
+      .nav-wordmark { font-size: 26px; }
+      .nav-links { order: 3; width: 100%; gap: 16px; }
+      .nav-links a { padding: 4px 0 6px; font-size: 15px; }
+      .nav-user { margin-left: auto; gap: 8px; }
+      .nav-who { display: none; }
+      .landing-header { padding: 36px 14px 34px; }
+      .landing-header.compact { padding: 20px 14px 18px; }
+      .hero-logo { gap: 8px; margin-bottom: 18px; }
+      .hero-wordmark { font-size: 46px; }
+      .landing-header.compact .hero-logo { margin-bottom: 10px; }
+      .landing-header.compact .hero-wordmark { font-size: 30px; }
+      .landing-header h1 { font-size: 1.5rem; }
+      .landing-header.compact h1 { font-size: 1.3rem; }
+      .hero-actions { margin-top: 20px; gap: 10px; }
+      .large-tertiary-button, .large-invert-ghost-button { min-width: 0; flex: 1 1 140px; padding: 13px 18px; }
+      .grid-2 { grid-template-columns: 1fr; gap: 14px; }
+      .box-content { padding: 16px; }
+      .flash-message { margin: 14px 0; padding: 11px 12px; font-size: 13px; }
+      .toolbar { display: flex; gap: 8px; }
+      .toolbar select { flex: 1 1 100%; width: 100%; min-width: 0; }
+      #refresh { flex: 1 1 100%; width: 100%; }
+      .booking-tabs a { padding: .9em .55em; font-size: .72em; }
+      .booking-table .inline_button_to { padding: 0 .2rem; }
+      .booking-table .inline_button_to .small-default-button,
+      .booking-table .inline_button_to .small-reject-button {
+        width: 100%;
+        min-width: 0;
+        max-width: 68px;
+        padding: .5em .2em !important;
+        font-size: 10px !important;
+      }
+      .table td { line-height: 2.4; }
+      .booking-table td:first-child, .booking-table th:first-child { min-width: 4.5rem; padding-left: .5rem; }
+      .booking-table-container-scroll { max-height: calc(100vh - 18rem); }
+      .site-footer { padding: 20px 0; font-size: 12px; }
+      .boot { padding: 48px 16px; }
+    }
+  </style>
+</head>
+<body>
+<nav class="nav-student">
+  <div class="container nav-inner">
+    <a class="nav-logo" href="#" aria-label="Fomo"><span class="nav-wordmark">fomo</span></a>
+    <div class="nav-links">
+      <a href="#" id="nav-home" class="active">Etusivu</a>
+      <a href="#booking-box" id="nav-bookings">Varaukset</a>
+    </div>
+    <div class="nav-user" id="nav-login" hidden>
+      <a class="invert-ghost-button" href="#login-box">Kirjaudu sisään</a>
+    </div>
+    <div class="nav-user" id="nav-user" hidden>
+      <span class="nav-who" id="who"></span>
+      <button id="logout" class="invert-ghost-button" type="button">Kirjaudu ulos</button>
+    </div>
+  </div>
+</nav>
+
+<div id="boot" class="boot">
+  <div class="container">
+    <p>Ladataan Fomoa…</p>
+    <p class="muted small">Ensimmäinen lataus hakee Pyodiden (~10 MB).</p>
+  </div>
+</div>
+
+<section id="login-view" hidden>
+  <header class="landing-header">
+    <div class="landing-header-content">
+      <div class="hero-logo"><span class="hero-wordmark">fomo</span></div>
+      <h1>Varaukset</h1>
+      <div class="hero-actions">
+        <a class="large-tertiary-button" href="#login-box">Kirjaudu sisään</a>
+      </div>
+    </div>
+  </header>
+  <div class="container page-content">
+    <div class="flash-message">Fomo on epävirallinen varausnäkymä. Käytä omalla vastuulla.</div>
+    <div class="grid-2">
+      <div class="box" id="login-box">
+        <div class="box-content">
+          <h2>Kirjaudu sisään</h2>
+          <p class="muted">Käytä Kulku-tilisi puhelinnumeroa ja salasanaa.</p>
+          <form id="login-form">
+            <label for="phone">Puhelinnumero</label>
+            <input id="phone" type="tel" autocomplete="tel" placeholder="040 123 4567" required>
+            <label for="password">Salasana</label>
+            <input id="password" type="password" autocomplete="current-password" required>
+            <div class="form-actions">
+              <button class="primary-button" type="submit">Kirjaudu sisään</button>
+              <span id="login-error" class="status error"></span>
+            </div>
+          </form>
+          <hr class="rule">
+          <details class="auth-import">
+            <summary>Tai tuo .auth.json-tiedosto</summary>
+            <label for="auth-file">Valitse tiedosto</label>
+            <input id="auth-file" type="file" accept="application/json,.json">
+            <p class="muted small">Tiedosto pysyy selaimessasi. Sitä ei lähetetä minnekään muualle kuin Kulkuun.</p>
+          </details>
+        </div>
+      </div>
+      <div class="box">
+        <div class="box-content">
+          <h2>Näin teet varauksen</h2>
+          <ol class="steps">
+            <li>Kirjaudu sisään Kulku-tunnuksillasi.</li>
+            <li>Valitse pyykkitupa, sauna tai kerhohuone.</li>
+            <li>Valitse päivä ja klikkaa vapaata vuoroa.</li>
+            <li>Voit peruuttaa oman varauksesi klikkaamalla sitä.</li>
+          </ol>
+          <p class="muted small">Fomo käyttää samaa Kulku-varausjärjestelmää kuin virallinen palvelu. Varaukset näkyvät myös siellä.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="app-view" hidden>
+  <header class="landing-header compact">
+    <div class="landing-header-content">
+      <div class="hero-logo"><span class="hero-wordmark">fomo</span></div>
+      <h1>Varaukset</h1>
+    </div>
+  </header>
+  <div class="container page-content">
+    <div class="box" id="booking-box">
+      <div class="box-content">
+        <div class="toolbar">
+          <select id="group" aria-label="Varausryhmä">
+            <option value="laundry" selected>Pyykkituvat</option>
+            <option value="sauna">Saunat</option>
+            <option value="clubroom">Kerhohuone</option>
+            <option value="all">Kaikki</option>
+          </select>
+          <button id="refresh" class="tool-button" type="button">Päivitä</button>
+        </div>
+        <div id="status" class="status"></div>
+        <ul class="tabs booking-tabs" id="day-tabs"></ul>
+        <div id="grid" class="grid"></div>
+        <div class="legend">
+          <span class="l-free">vapaa / varaa</span>
+          <span class="l-mine">oma / peruuta</span>
+          <span class="l-taken">varattu</span>
+          <span class="l-shift">yleinen vuoro</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-logo"><span class="footer-wordmark">fomo</span></div>
+    <p>Fomo · epävirallinen varausnäkymä</p>
+  </div>
+</footer>
+
+<div id="toast" hidden></div>
+<noscript>Tämä sivu tarvitsee JavaScriptin ja WebAssemblyn.</noscript>
+
+<script type="text/plain" id="kulku-source">__KULKU_B64__</script>
+<script type="text/plain" id="app-source">__APP_B64__</script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.29.4/full/pyodide.js"></script>
+<script>
+const CDN = "https://cdn.jsdelivr.net/pyodide/v0.29.4/full/";
+const API = "https://portal.kulku.io/api/v2/";
+const AUTH_KEY = "kulku.auth.v1";
+const $ = (id) => document.getElementById(id);
+
+const state = {
+  app: null,
+  auth: null,
+  date: helsinkiToday(),
+  group: "laundry",
+  busy: false,
+  payload: null,
+  spaces: null,
+};
+
+let toastTimer = null;
+
+function helsinkiToday() {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Helsinki" }).format(new Date());
+}
+
+function addDays(iso, delta) {
+  const d = new Date(iso + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+function tick() {
+  return new Promise((resolve) => setTimeout(resolve, 30));
+}
+
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[ch]));
+}
+
+function parseJson(text) {
+  try {
+    const value = JSON.parse(text);
+    return (value && typeof value === "object") ? value : { ok: false, error: String(text) };
+  } catch (err) {
+    return { ok: false, error: String(text) };
+  }
+}
+
+function inlineSource(id) {
+  const node = $(id);
+  if (!node) throw new Error(`Missing ${id}`);
+  const raw = node.textContent.trim();
+  if (!raw || raw.startsWith("__")) throw new Error(`${id} was not built; run build.py`);
+  const binary = atob(raw);
+  const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+// file:// pages may have localStorage disabled. Keep working in memory then.
+function storageGet(key) {
+  try { return localStorage.getItem(key); } catch (err) { return null; }
+}
+function storageSet(key, value) {
+  try { localStorage.setItem(key, value); } catch (err) { /* ignore */ }
+}
+function storageRemove(key) {
+  try { localStorage.removeItem(key); } catch (err) { /* ignore */ }
+}
+
+function authHeaders() {
+  if (!state.auth) return { Accept: "application/json" };
+  return {
+    Accept: "application/json",
+    "x-Auth-Token": state.auth.authToken,
+    "x-User-Id": state.auth.userId,
+  };
+}
+
+async function apiGet(path) {
+  const res = await fetch(API + path, { headers: authHeaders(), cache: "no-store" });
+  if (!res.ok) {
+    let payload = null;
+    try { payload = await res.json(); } catch (err) { /* try text */ }
+    if (payload === null) {
+      try { payload = await res.text(); } catch (err) { /* ignore */ }
+    }
+    const message = payload && typeof payload === "object" ? payload.message : payload;
+    const error = new Error(message || `HTTP ${res.status}`);
+    error.status = res.status;
+    throw error;
+  }
+  return res.json();
+}
+
+function spaceGroups(space) {
+  const icon = space.spaceIcon || "other";
+  return (icon === "washroom" || icon === "dryroom") ? ["laundry"] : [icon];
+}
+
+function groupMatches(space, group) {
+  return !space.isContainer && (group === "all" || spaceGroups(space).includes(group));
+}
+
+async function loadSpaces(force = false) {
+  if (state.spaces && !force) return state.spaces;
+  const payload = await apiGet("spaces");
+  const spaces = Array.isArray(payload) ? payload : (payload && Array.isArray(payload.data) ? payload.data : []);
+  state.spaces = spaces;
+  return spaces;
+}
+
+function setStatus(text, isError = false) {
+  const el = $("status");
+  el.textContent = text || "";
+  el.classList.toggle("error", !!isError);
+}
+
+function setBoot(text) {
+  const el = $("boot");
+  el.innerHTML = "";
+  const p = document.createElement("p");
+  p.textContent = text;
+  el.appendChild(p);
+}
+
+function setLoginError(text) {
+  $("login-error").textContent = text || "";
+}
+
+function showView(name) {
+  $("boot").hidden = name !== "boot";
+  $("login-view").hidden = name !== "login";
+  $("app-view").hidden = name !== "app";
+  const navUser = $("nav-user");
+  if (navUser) navUser.hidden = name !== "app";
+  const navLogin = $("nav-login");
+  if (navLogin) navLogin.hidden = name !== "login";
+  const home = $("nav-home");
+  const bookings = $("nav-bookings");
+  if (home && bookings) {
+    home.classList.toggle("active", name === "login");
+    bookings.classList.toggle("active", name === "app");
+  }
+}
+
+function showToast(text, undoId) {
+  clearTimeout(toastTimer);
+  const el = $("toast");
+  el.textContent = "";
+  const span = document.createElement("span");
+  span.textContent = text;
+  el.appendChild(span);
+  if (undoId) {
+    const undo = document.createElement("button");
+    undo.type = "button";
+    undo.textContent = "Kumoa";
+    undo.onclick = () => {
+      hideToast();
+      doCancel(undoId);
+    };
+    el.appendChild(undo);
+  }
+  el.hidden = false;
+  toastTimer = setTimeout(hideToast, 10000);
+}
+
+function hideToast() {
+  clearTimeout(toastTimer);
+  $("toast").hidden = true;
+}
+
+function handleAuthExpired() {
+  state.auth = null;
+  state.spaces = null;
+  storageRemove(AUTH_KEY);
+  try { state.app.set_auth(""); } catch (err) { /* ignore */ }
+  showView("login");
+  setLoginError("Istunto vanhentui. Kirjaudu uudelleen.");
+}
+
+function handleError(res) {
+  if (res && res.code === "auth") {
+    handleAuthExpired();
+    return;
+  }
+  setStatus((res && res.error) || "Tuntematon virhe", true);
+}
+
+async function boot() {
+  showView("boot");
+  try {
+    if (typeof loadPyodide !== "function") throw new Error("Pyodide failed to load from the CDN");
+    setBoot("Ladataan Pyodidea…");
+    const pyodide = await loadPyodide({ indexURL: CDN });
+    setBoot("Ladataan aikavyöhykettä…");
+    try {
+      await pyodide.loadPackage("tzdata");
+    } catch (err) {
+      setBoot("Asennetaan aikavyöhykettä…");
+      await pyodide.runPythonAsync("import micropip\nawait micropip.install('tzdata')");
+    }
+
+    setBoot("Ladataan Kulku-koodia…");
+    const kulkuSource = inlineSource("kulku-source");
+    const appSource = inlineSource("app-source");
+    pyodide.FS.writeFile("/home/pyodide/kulku.py", new TextEncoder().encode(kulkuSource));
+    pyodide.FS.writeFile("/home/pyodide/app.py", new TextEncoder().encode(appSource));
+    setBoot("Käynnistetään Pythonia…");
+    await pyodide.runPythonAsync(
+      'import sys\nsys.path.insert(0, "/home/pyodide")\nimport kulku\nimport app\n'
+    );
+    state.app = pyodide.globals.get("app");
+
+    const saved = storageGet(AUTH_KEY);
+    if (saved) {
+      const res = parseJson(state.app.set_auth(saved));
+      if (res.ok) {
+        state.auth = JSON.parse(saved);
+      } else {
+        storageRemove(AUTH_KEY);
+      }
+    }
+    if (state.auth) {
+      await enterApp();
+    } else {
+      showView("login");
+    }
+  } catch (err) {
+    $("boot").innerHTML = "";
+    const p = document.createElement("p");
+    p.textContent = "Could not start: " + String(err);
+    $("boot").appendChild(p);
+  }
+}
+
+function renderDayTabs() {
+  const el = $("day-tabs");
+  if (!el) return;
+  const weekdays = ["su", "ma", "ti", "ke", "to", "pe", "la"];
+  const days = [];
+  const today = helsinkiToday();
+  for (let i = 0; i < 7; i++) {
+    const iso = addDays(today, i);
+    const d = new Date(iso + "T12:00:00Z");
+    days.push({ iso, label: `${weekdays[d.getUTCDay()]} ${d.getUTCDate()}.${d.getUTCMonth() + 1}.` });
+  }
+  if (!days.some((day) => day.iso === state.date)) {
+    const d = new Date(state.date + "T12:00:00Z");
+    days.push({
+      iso: state.date,
+      label: `${weekdays[d.getUTCDay()]} ${d.getUTCDate()}.${d.getUTCMonth() + 1}.`,
+    });
+  }
+  el.innerHTML = days
+    .map(
+      (day) =>
+        `<li class="${day.iso === state.date ? "active" : ""}">` +
+        `<a href="#" data-date="${esc(day.iso)}">${esc(day.label)}</a></li>`
+    )
+    .join("");
+  for (const link of el.querySelectorAll("a")) {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (state.date === link.dataset.date) return;
+      state.date = link.dataset.date;
+      renderDayTabs();
+      loadGrid();
+    });
+  }
+}
+
+async function enterApp() {
+  showView("app");
+  state.spaces = null;
+  $("who").textContent = state.auth && state.auth.username ? state.auth.username : "";
+  $("group").value = state.group;
+  renderDayTabs();
+  setLoginError("");
+  await loadGrid();
+}
+
+async function loadGrid(silent = false) {
+  if (!state.app || state.busy || !state.auth) return;
+  state.busy = true;
+  $("grid").classList.add("busy");
+  if (!silent) setStatus("Ladataan…");
+  await tick();
+  try {
+    const spaces = (await loadSpaces()).filter((space) => groupMatches(space, state.group));
+    if (!spaces.length) {
+      state.payload = { columns: [], rows: [] };
+      renderGrid(state.payload);
+      setStatus("Ei tiloja tässä ryhmässä.");
+      return;
+    }
+    const day = state.date;
+    const [bookings, dayResults] = await Promise.all([
+      apiGet("bookings?includeCancelled=1"),
+      Promise.allSettled(
+        spaces.map((space) =>
+          apiGet(`space/${encodeURIComponent(space._id)}?date=${encodeURIComponent(day)}`)
+        )
+      ),
+    ]);
+    const days = {};
+    spaces.forEach((space, index) => {
+      const result = dayResults[index];
+      if (result.status !== "fulfilled") {
+        days[space._id] = {
+          __error: (result.reason && result.reason.message) || String(result.reason),
+        };
+        return;
+      }
+      const value = result.value;
+      days[space._id] = {
+        allowReservation: value.allowReservation,
+        paymentRequired: value.paymentRequired,
+        monthUsage: value.monthUsage,
+        bookings: value.bookings || [],
+        events: value.events || [],
+        recurringReservations: value.recurringReservations || [],
+      };
+    });
+    const res = parseJson(state.app.build_grid(JSON.stringify({
+      date: day,
+      group: state.group,
+      spaces,
+      bookings,
+      days,
+    })));
+    if (!res.ok) {
+      handleError(res);
+      return;
+    }
+    state.payload = res;
+    renderGrid(res);
+    setStatus("Päivitetty " + new Date().toLocaleTimeString("fi-FI", { hour: "2-digit", minute: "2-digit" }));
+  } catch (err) {
+    if (err && err.status === 401) {
+      handleAuthExpired();
+      return;
+    }
+    setStatus(err && err.message ? err.message : String(err), true);
+  } finally {
+    state.busy = false;
+    $("grid").classList.remove("busy");
+  }
+}
+
+function renderGrid(payload) {
+  const spaces = payload.rows || [];
+  const times = payload.columns || [];
+  if (!times.length || !spaces.length) {
+    $("grid").innerHTML = '<p class="muted">Ei varattavia vuoroja tälle päivälle.</p>';
+    return;
+  }
+
+  const bySpace = {};
+  for (const space of spaces) {
+    const map = {};
+    for (const slot of space.slots || []) map[slot.start] = slot;
+    bySpace[space.id] = map;
+  }
+
+  let html = '<div class="booking-table"><div class="booking-table-container-scroll"><table class="table"><thead><tr><th>Aika</th>';
+  for (const space of spaces) {
+    const headerTitle = space.error || space.address || "";
+    html += `<th class="align-center" title="${esc(headerTitle)}"><p>${esc(space.name)}</p></th>`;
+  }
+  html += "</tr></thead><tbody>";
+
+  for (const time of times) {
+    html += `<tr><td>${esc(time.label)}</td>`;
+    for (const space of spaces) {
+      const slot = bySpace[space.id] && bySpace[space.id][time.start];
+      if (!slot) {
+        html += '<td class="align-center"></td>';
+        continue;
+      }
+      const title = `${space.name} · ${slot.label}${slot.detail ? " · " + slot.detail : ""}`;
+      if (slot.state === "free") {
+        html += `<td class="align-center"><div class="inline_button_to"><button type="button" class="small-default-button slot-free" data-space="${esc(space.id)}" data-start="${esc(slot.start)}" data-end="${esc(slot.end)}" data-label="${esc(slot.label)}" title="${esc(title)}" aria-label="Varaa ${esc(title)}">Varaa</button></div></td>`;
+      } else if (slot.state === "mine") {
+        html += `<td class="align-center"><div class="inline_button_to"><button type="button" class="small-reject-button slot-mine" data-booking="${esc(slot.bookingId || "")}" data-label="${esc(slot.label)}" title="${esc(title)}" aria-label="Peruuta ${esc(title)}">Peru</button></div></td>`;
+      } else {
+        const text = slot.state === "recurring"
+          ? (slot.detail || "Yleinen vuoro")
+          : slot.state === "event"
+            ? (slot.detail || "Tapahtuma")
+            : slot.state === "taken"
+              ? "Varattu"
+              : slot.state === "past" || slot.state === "closed"
+                ? "–"
+                : "";
+        html += `<td class="align-center booked-cell" title="${esc(title)}">${esc(text)}</td>`;
+      }
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table></div></div>";
+  $("grid").innerHTML = html;
+
+  for (const btn of $("grid").querySelectorAll("button.slot-free")) {
+    btn.addEventListener("click", onBook);
+  }
+  for (const btn of $("grid").querySelectorAll("button.slot-mine")) {
+    btn.addEventListener("click", onCancelClick);
+  }
+}
+
+async function onBook(event) {
+  if (state.busy) return;
+  const btn = event.currentTarget;
+  const { space, start, end, label } = btn.dataset;
+  state.busy = true;
+  $("grid").classList.add("busy");
+  setStatus(`Varataan ${label}…`);
+  await tick();
+  let result;
+  try {
+    result = parseJson(state.app.book_direct(space, state.date, start, end));
+  } catch (err) {
+    result = { ok: false, error: String(err) };
+  } finally {
+    state.busy = false;
+    $("grid").classList.remove("busy");
+  }
+  if (!result.ok) {
+    handleError(result);
+    return;
+  }
+  await loadGrid(true);
+  showToast(`Varattu ${label}.`, result.bookingId);
+}
+
+async function onCancelClick(event) {
+  const bookingId = event.currentTarget.dataset.booking;
+  if (!bookingId) return;
+  if (!confirm("Peruuta tämä varaus?")) return;
+  await doCancel(bookingId);
+}
+
+async function doCancel(bookingId) {
+  if (state.busy) return;
+  state.busy = true;
+  $("grid").classList.add("busy");
+  setStatus("Peruutetaan…");
+  await tick();
+  let result;
+  try {
+    result = parseJson(state.app.cancel_direct(bookingId));
+  } catch (err) {
+    result = { ok: false, error: String(err) };
+  } finally {
+    state.busy = false;
+    $("grid").classList.remove("busy");
+  }
+  if (!result.ok) {
+    handleError(result);
+    return;
+  }
+  await loadGrid(true);
+  showToast("Peruttu.");
+}
+
+$("login-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (state.busy || !state.app) return;
+  state.busy = true;
+  setLoginError("");
+  setStatus("Logging in…");
+  await tick();
+  try {
+    const res = parseJson(state.app.login($("phone").value, $("password").value));
+    if (!res.ok) {
+      setLoginError(res.error || "Kirjautuminen epäonnistui");
+      return;
+    }
+    state.auth = res.auth;
+    storageSet(AUTH_KEY, JSON.stringify(res.auth));
+    $("password").value = "";
+    await enterApp();
+  } catch (err) {
+    setLoginError(String(err));
+  } finally {
+    state.busy = false;
+  }
+});
+
+$("auth-file").addEventListener("change", async (event) => {
+  const file = event.target.files && event.target.files[0];
+  if (!file || !state.app) return;
+  try {
+    const text = await file.text();
+    const res = parseJson(state.app.set_auth(text));
+    if (!res.ok) {
+      setLoginError(res.error || "Virheellinen .auth.json-tiedosto");
+      return;
+    }
+    const auth = JSON.parse(text);
+    state.auth = auth;
+    storageSet(AUTH_KEY, JSON.stringify(auth));
+    await enterApp();
+  } catch (err) {
+    setLoginError(String(err));
+  }
+});
+
+$("logout").addEventListener("click", () => {
+  storageRemove(AUTH_KEY);
+  state.auth = null;
+  state.spaces = null;
+  if (state.app) state.app.set_auth("");
+  hideToast();
+  showView("login");
+  setStatus("");
+  setLoginError("");
+});
+
+$("group").addEventListener("change", () => {
+  state.group = $("group").value;
+  loadGrid();
+});
+
+$("refresh").addEventListener("click", () => loadGrid());
+
+setInterval(() => {
+  if (state.auth && state.app && !state.busy && !document.hidden) loadGrid(true);
+}, 60000);
+
+boot();
+</script>
+</body>
+</html>

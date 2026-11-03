@@ -7,6 +7,7 @@ Usage:
     python3 scripts/kulku.py --past        # past only
     python3 scripts/kulku.py --codes       # show access codes (default: hidden)
     python3 scripts/kulku.py --json        # machine-readable dump
+    python3 scripts/kulku.py --me          # everything the session exposes about you
     python3 scripts/kulku.py --spaces      # list spaces you can book
     python3 scripts/kulku.py --available SPACE [--date DATE]
     python3 scripts/kulku.py --book SPACE --date DATE --time HH:MM [-y]
@@ -36,12 +37,16 @@ import json
 import os
 import re
 import shutil
-import ssl
 import sys
 import urllib.error
 import urllib.request
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
+
+try:
+    import ssl
+except ImportError:  # Pyodide does not vendor ssl; the browser transport handles HTTP.
+    ssl = None
 
 API = "https://portal.kulku.io/api/v2/"
 TZ = ZoneInfo("Europe/Helsinki")
@@ -113,8 +118,9 @@ def request(path: str, *, auth: dict | None = None, body=None, method: str | Non
     if auth:
         req.add_header("x-Auth-Token", auth["authToken"])
         req.add_header("x-User-Id", auth["userId"])
+    context = ssl.create_default_context() if ssl else None
     try:
-        with urllib.request.urlopen(req, context=ssl.create_default_context(), timeout=60) as res:
+        with urllib.request.urlopen(req, context=context, timeout=60) as res:
             raw = res.read().decode() or "null"
             try:
                 return res.status, json.loads(raw)
@@ -1002,6 +1008,56 @@ def cmd_show(data: dict, args) -> None:
         print_series(data["series"], now, args.codes)
 
 
+def cmd_me(auth: dict, data: dict) -> int:
+    status, me = request("myDetails", auth=auth)
+    if status != 200 or not isinstance(me, dict):
+        print(f"Could not load profile (HTTP {status}).", file=sys.stderr)
+        return 1
+    prof = me.get("profile") or {}
+    name = prof.get("name") or {}
+    reg = me.get("register") or {}
+    print(f"{C.BOLD}{C.CYAN}ACCOUNT{C.RESET}")
+    print(f"  name        : {name.get('first', '')} {name.get('last', '')}".rstrip())
+    print(f"  displayName : {reg.get('displayName') or '-'}")
+    print(f"  nick        : {name.get('nick') or '-'} {name.get('nickLast') or ''}".rstrip())
+    print(f"  phone       : {me.get('username') or '-'}")
+    print(f"  email       : {me.get('email') or '(empty)'}")
+    print(f"  avatar      : {'yes' if prof.get('avatar') else 'none'}")
+    print(f"  userId      : {auth.get('userId')}")
+
+    print(f"\n{C.BOLD}{C.CYAN}BOOKINGS{C.RESET} ({len(data['bookings'])})")
+    for b in sorted(data["bookings"], key=lambda x: x["start"]):
+        tag = f"  {C.RED}[cancelled]{C.RESET}" if b["cancelled"] else ""
+        print(f"  {b['start']:%a %d.%m.%Y %H:%M}–{b['end']:%H:%M}  {C.BOLD}{b['name']}{C.RESET}{tag}")
+        print(f"    address={b['address'] or '-'}  id={b['id']}")
+        print(f"    code={'yes' if b['code'] else 'no'}  payment={b['payment_status'] or '-'}  amount={fmt_price(b['amount']) or '-'}")
+        raw = b["raw"]
+        print(f"    createdAt={raw.get('createdAt')}  updatedAt={raw.get('updatedAt')}")
+        print(f"    userId={raw.get('userId')}  checkoutData={raw.get('checkoutData')}")
+
+    print(f"\n{C.BOLD}{C.CYAN}SPACES{C.RESET} ({len(data['spaces'])})")
+    print("  " + ", ".join(sorted({s.get("spaceName", "?") for s in data["spaces"].values()})))
+    addrs = set()
+    for s in data["spaces"].values():
+        for site in (s.get("sites") or s.get("houses") or []):
+            a = (site or {}).get("address")
+            if isinstance(a, str):
+                addrs.add(a)
+            elif isinstance(a, dict):
+                addrs.add(a.get("street") or a.get("address") or str(a))
+    if addrs:
+        print("  site addresses:")
+        for a in sorted(addrs):
+            print(f"    - {a}")
+
+    print(f"\n{C.BOLD}{C.CYAN}OTHER{C.RESET}")
+    print(f"  recurring-reservations: {len(data['series'])}")
+    for path, label in (("myspacefavorites", "myspacefavorites"), ("announcements", "announcements")):
+        st, payload = request(path, auth=auth)
+        print(f"  {label}: {len(payload) if isinstance(payload, list) and st == 200 else '?'}")
+    return 0
+
+
 def cmd_json(data: dict) -> None:
     def serialize(booking):
         return {
@@ -1379,6 +1435,7 @@ def main() -> int:
     parser.add_argument("--codes", action="store_true", help="show access codes")
     parser.add_argument("--limit", type=int, default=20, help="past entries to show (0 = all)")
     parser.add_argument("--json", action="store_true", help="JSON output")
+    parser.add_argument("--me", action="store_true", help="dump profile, bookings, spaces and addresses")
     parser.add_argument("--spaces", "--list-spaces", action="store_true", help="list spaces you can book")
     parser.add_argument("--available", "--slots", metavar="SPACE", help="show slots for a space")
     parser.add_argument("--book", "--reserve", metavar="SPACE", help="book a slot in a space")
@@ -1432,6 +1489,8 @@ def main() -> int:
         return cmd_cancel(data, args, auth)
     if args.change:
         return cmd_change(data, args, auth)
+    if args.me:
+        return cmd_me(auth, data)
     if args.json:
         cmd_json(data)
         return 0
