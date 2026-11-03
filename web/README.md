@@ -13,6 +13,8 @@ The reservation view follows Domo's own `booking-tabs` / `booking-table`
 structure: day tabs, machines across the top, time rows down the left, a
 sticky time column, green `Book` buttons and red `Cancel` buttons for your own
 bookings.
+Space names come from the API's English translation when available; otherwise the
+API default name is shown as-is.
 
 This is an unofficial personal mockup. The background pattern is used only to
 match the old Domo look.

@@ -92,26 +92,12 @@ def _data(auth: dict, *, fresh: bool = False) -> dict:
     return data
 
 
-EN_SPACE_NAMES = {
-    "Pyykkikone": "Washing machine",
-    "Kuivausrumpu": "Dryer",
-    "Matonpesukone": "Rug washer",
-    "Pyykkitupa": "Laundry room",
-    "Kerhohuone": "Club room",
-    "Sauna": "Sauna",
-}
-
-
 def _display_name(space: dict) -> str:
     translations = space.get("translations") or {}
     english = (translations.get("en") or {}).get("name")
-    name = english.strip() if isinstance(english, str) and english.strip() else kulku.space_name(space)
-    for finnish, translated in EN_SPACE_NAMES.items():
-        if name == finnish:
-            return translated
-        if name.startswith(finnish + " "):
-            return translated + name[len(finnish):]
-    return name
+    if isinstance(english, str) and english.strip():
+        return english.strip()
+    return kulku.space_name(space)
 
 
 def _space_dict(space: dict) -> dict:
