@@ -1303,7 +1303,8 @@ def cmd_book(data: dict, args, auth: dict) -> int:
         if not sys.stdin.isatty():
             print("Refusing to book without --yes in a non-interactive shell.", file=sys.stderr)
             return 1
-        answer = input("\nBook this reservation? [y/N] ").strip().lower()
+        print("\nBook this reservation? [y/N] ", end="", file=sys.stderr, flush=True)
+        answer = sys.stdin.readline().strip().lower()
         if answer not in ("y", "yes"):
             print("Not booked.")
             return 0
